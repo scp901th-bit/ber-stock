@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BP Snooker — ระบบตรวจสต๊อกเบียร์</title>
+<meta name="theme-color" content="#e8b800">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BP Stock">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Share+Tech+Mono&family=Oswald:wght@700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0800;--surface:#110f00;--surface2:#1a1700;--border:#3a3210;
+  --text:#f0e6b0;--muted:#7a6e40;--accent:#e8b800;--accent2:#e85000;
+  --red:#e84040;--green:#60c870;--yellow:#e8b800;--cyan:#00d4c8;
+}
+
+/* ═══ INTRO ═══ */
+#intro{
+  position:fixed;inset:0;background:#000;z-index:9999;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;
+}
+#intro::before{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:2;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.28) 2px,rgba(0,0,0,0.28) 4px);
+  animation:scanroll 8s linear infinite;
+}
+@keyframes scanroll{0%{background-position:0 0}100%{background-position:0 100px}}
+#intro::after{
+  content:'';position:absolute;inset:-50%;pointer-events:none;z-index:1;opacity:0.12;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.1'/%3E%3C/svg%3E");
+  animation:grain .12s steps(1) infinite;
+}
+@keyframes grain{
+  0%,100%{transform:translate(0,0)}10%{transform:translate(-3%,-2%)}
+  20%{transform:translate(2%,3%)}30%{transform:translate(-1%,1%)}
+  40%{transform:translate(3%,-3%)}50%{transform:translate(-2%,2%)}
+  60%{transform:translate(1%,-1%)}70%{transform:translate(-3%,3%)}
+  80%{transform:translate(2%,-2%)}90%{transform:translate(-1%,1%)}
+}
+.vhs-rec{position:absolute;top:24px;left:24px;z-index:10;display:flex;align-items:center;gap:6px;font-family:'Share Tech Mono',monospace;font-size:12px;color:#ff2020;letter-spacing:2px}
+.rec-dot{width:8px;height:8px;border-radius:50%;background:#ff2020;box-shadow:0 0 6px #ff2020;animation:recBlink 1s ease-in-out infinite}
+@keyframes recBlink{0%,100%{opacity:1}50%{opacity:0}}
+.vhs-stamp{position:absolute;top:24px;right:24px;z-index:10;font-family:'Share Tech Mono',monospace;font-size:12px;color:#ff6600;text-shadow:0 0 8px #ff660080;letter-spacing:1px;animation:stampBlink 2s steps(1) infinite}
+@keyframes stampBlink{0%,90%{opacity:1}91%,100%{opacity:.2}}
+.glitch-bar{position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent 20%,var(--cyan) 50%,transparent 80%);opacity:0;animation:glitchBar 5s ease-in-out infinite}
+.glitch-bar:nth-child(4){animation-delay:2s}
+@keyframes glitchBar{0%,85%,100%{opacity:0;top:30%}86%{opacity:.8;top:38%}88%{opacity:.4;top:62%}90%{opacity:0}}
+.intro-content{position:relative;z-index:3;text-align:center;animation:introIn .9s cubic-bezier(.23,1,.32,1) forwards}
+@keyframes introIn{0%{opacity:0;transform:scale(1.06);filter:blur(5px)}100%{opacity:1;transform:scale(1);filter:blur(0)}}
+.studio-box{border:2px solid var(--cyan);padding:7px 26px;margin-bottom:28px;display:inline-block;position:relative;box-shadow:0 0 20px rgba(0,212,200,.3),inset 0 0 20px rgba(0,212,200,.04)}
+.studio-box::before,.studio-box::after{content:'';position:absolute;width:10px;height:10px;border-color:var(--cyan);border-style:solid}
+.studio-box::before{top:-4px;left:-4px;border-width:2px 0 0 2px}
+.studio-box::after{bottom:-4px;right:-4px;border-width:0 2px 2px 0}
+.studio-text{font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:6px;color:var(--cyan);text-shadow:0 0 12px rgba(0,212,200,.8)}
+.intro-title{font-family:'Oswald',sans-serif;font-size:clamp(34px,10vw,70px);font-weight:700;color:#fff;letter-spacing:4px;line-height:1;margin-bottom:6px;
+  text-shadow:3px 0 0 rgba(232,0,0,.7),-3px 0 0 rgba(0,212,200,.7),0 0 40px rgba(255,255,255,.25);
+  animation:titleGlitch 7s ease-in-out infinite}
+@keyframes titleGlitch{
+  0%,93%,100%{text-shadow:3px 0 0 rgba(232,0,0,.7),-3px 0 0 rgba(0,212,200,.7),0 0 40px rgba(255,255,255,.25);transform:translate(0)}
+  94%{text-shadow:-4px 0 0 rgba(232,0,0,.9),4px 0 0 rgba(0,212,200,.9);transform:translate(2px,-1px)}
+  95%{text-shadow:4px 0 0 rgba(232,0,0,.9),-4px 0 0 rgba(0,212,200,.9);transform:translate(-2px,1px)}
+  96%{text-shadow:3px 0 0 rgba(232,0,0,.7),-3px 0 0 rgba(0,212,200,.7);transform:translate(0)}
+}
+.intro-subtitle{font-family:'Share Tech Mono',monospace;font-size:clamp(10px,2.5vw,13px);color:var(--cyan);letter-spacing:4px;margin-bottom:44px;opacity:.85}
+.vhs-progress{width:240px;height:3px;background:#1a1a1a;border:1px solid #333;margin:0 auto 16px;overflow:hidden}
+.vhs-progress-fill{height:100%;background:linear-gradient(90deg,var(--cyan),#fff,var(--cyan));width:0%;box-shadow:0 0 8px var(--cyan)}
+.vhs-loading{font-family:'Share Tech Mono',monospace;font-size:10px;color:#444;letter-spacing:3px}
+.vhs-loading span{color:var(--cyan);animation:dotPulse 1.2s ease-in-out infinite}
+@keyframes dotPulse{0%,100%{opacity:.3}50%{opacity:1}}
+
+/* ═══ FADE ═══ */
+#fade-overlay{position:fixed;inset:0;background:#000;z-index:8888;pointer-events:none;opacity:0;transition:opacity .55s ease}
+#fade-overlay.fading{opacity:1}
+
+/* ═══ APP ═══ */
+#app{opacity:0;transition:opacity .8s ease}
+#app.visible{opacity:1}
+body{background:var(--bg);color:var(--text);font-family:'Sarabun',sans-serif;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.06) 3px,rgba(0,0,0,.06) 4px);pointer-events:none;z-index:100}
+body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at center,transparent 60%,rgba(0,0,0,.5) 100%);pointer-events:none;z-index:99}
+
+header{background:var(--surface);border-bottom:2px solid var(--accent);padding:14px 28px;display:flex;align-items:center;gap:14px;position:relative}
+header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:.4}
+.logo-badge{background:var(--accent);color:#000;font-family:'Share Tech Mono',monospace;font-size:11px;padding:5px 12px;border-radius:2px;letter-spacing:1px;box-shadow:3px 3px 0 rgba(0,0,0,.5)}
+header h1{font-family:'Oswald',sans-serif;font-size:19px;font-weight:700;color:var(--text);letter-spacing:2px;text-transform:uppercase;text-shadow:0 0 18px rgba(232,184,0,.4)}
+.header-sub{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--cyan);letter-spacing:2px;opacity:.75;margin-top:2px}
+
+.container{max-width:960px;margin:0 auto;padding:26px 22px}
+.section-label{font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:4px;color:var(--cyan);text-transform:uppercase;margin-bottom:10px;opacity:.7}
+
+/* ═══ FORMULA BOX ═══ */
+.formula-box{background:#0d0b00;border:1px solid var(--border);border-left:3px solid var(--cyan);border-radius:2px;padding:13px 16px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--muted);line-height:2;margin-bottom:20px}
+.formula-box span{color:var(--accent)}
+.formula-box em{color:var(--cyan);font-style:normal}
+
+/* ═══ INPUT GRID ═══ */
+.input-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px}
+.beer-card{background:var(--surface);border:1px solid var(--border);border-radius:3px;padding:18px;position:relative;overflow:hidden}
+.beer-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.beer-card::after{content:'';position:absolute;top:8px;right:8px;width:14px;height:14px;border-top:1px solid var(--border);border-right:1px solid var(--border);opacity:.5}
+.beer-card.singha::before{background:linear-gradient(90deg,#1a6abf,#4d9fe0)}
+.beer-card.leo::before{background:linear-gradient(90deg,#b87800,#e0c040)}
+.beer-card.chang::before{background:linear-gradient(90deg,#1a6a2a,#50c068)}
+.beer-icon{font-size:22px;margin-bottom:7px;display:block}
+.beer-name{font-family:'Oswald',sans-serif;font-size:16px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:14px}
+.beer-card.singha .beer-name{color:#4d9fe0;text-shadow:0 0 10px rgba(77,159,224,.35)}
+.beer-card.leo .beer-name{color:#e0c040;text-shadow:0 0 10px rgba(224,192,64,.35)}
+.beer-card.chang .beer-name{color:#50c068;text-shadow:0 0 10px rgba(80,192,104,.35)}
+
+.field-group{margin-bottom:10px}
+.field-group label{display:block;font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:4px;letter-spacing:2px;text-transform:uppercase}
+.field-group input{width:100%;background:#0d0b00;border:1px solid var(--border);border-radius:2px;padding:9px 11px;color:var(--accent);font-family:'Share Tech Mono',monospace;font-size:15px;outline:none;transition:border-color .15s,box-shadow .15s;caret-color:var(--accent)}
+.field-group input::placeholder{color:#2e2a08}
+.field-group input:focus{border-color:var(--accent);box-shadow:0 0 0 1px rgba(232,184,0,.18),inset 0 0 8px rgba(232,184,0,.04)}
+.field-group input.pro-input{color:var(--red)}
+.field-group input.pro-input:focus{border-color:var(--red);box-shadow:0 0 0 1px rgba(232,64,64,.18)}
+
+/* ═══ PRO ROW SECTIONS ═══ */
+.pro-section{margin-top:10px;border-top:1px dashed rgba(58,50,16,.7);padding-top:10px}
+.pro-section-label{font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--cyan);letter-spacing:3px;text-transform:uppercase;margin-bottom:8px;opacity:.7}
+.pro-rows{}
+.pro-row{display:flex;align-items:center;gap:6px;margin-bottom:7px}
+.pro-row select{background:#0d0b00;border:1px solid var(--border);border-radius:2px;padding:6px 7px;color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:11px;outline:none;cursor:pointer;flex-shrink:0;transition:border-color .15s}
+.pro-row select:focus{border-color:var(--accent)}
+.pro-row input{flex:1;background:#0d0b00;border:1px solid var(--border);border-radius:2px;padding:7px 9px;color:var(--red);font-family:'Share Tech Mono',monospace;font-size:14px;outline:none;transition:border-color .15s}
+.pro-row input::placeholder{color:#2e2a08}
+.pro-row input:focus{border-color:var(--red);box-shadow:0 0 0 1px rgba(232,64,64,.15)}
+.pro-row .del-btn{background:none;border:1px solid #3a1010;border-radius:2px;color:#a04040;font-size:13px;width:26px;height:30px;cursor:pointer;transition:all .15s;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.pro-row .del-btn:hover{border-color:var(--red);color:var(--red);background:rgba(232,64,64,.08)}
+.add-pro-btn{width:100%;background:none;border:1px dashed #3a3210;border-radius:2px;padding:6px;color:var(--muted);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:1px;cursor:pointer;transition:all .15s;margin-top:4px}
+.add-pro-btn:hover{border-color:var(--cyan);color:var(--cyan)}
+
+/* ═══ PRO MANAGER SECTION ═══ */
+.pro-manager{background:var(--surface);border:1px solid var(--border);border-radius:3px;padding:16px 18px;margin-bottom:22px}
+.pro-type-list{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;min-height:32px}
+.pro-tag{display:inline-flex;align-items:center;gap:6px;background:#0d0b00;border:1px solid var(--border);border-radius:2px;padding:5px 10px;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--accent)}
+.pro-tag.builtin{color:var(--muted);border-color:#2a2000}
+.pro-tag .tag-del{background:none;border:none;color:#6a3030;font-size:12px;cursor:pointer;padding:0 0 0 2px;line-height:1;transition:color .12s}
+.pro-tag .tag-del:hover{color:var(--red)}
+.pro-add-form{display:flex;gap:8px;align-items:center}
+.pro-add-form input[type=text]{flex:1;background:#0d0b00;border:1px solid var(--border);border-radius:2px;padding:8px 11px;color:var(--text);font-family:'Share Tech Mono',monospace;font-size:12px;outline:none;transition:border-color .15s}
+.pro-add-form input[type=text]:focus{border-color:var(--accent)}
+.pro-add-form input[type=number]{width:80px;background:#0d0b00;border:1px solid var(--border);border-radius:2px;padding:8px 11px;color:var(--accent);font-family:'Share Tech Mono',monospace;font-size:13px;outline:none;transition:border-color .15s}
+.pro-add-form input[type=number]:focus{border-color:var(--accent)}
+.pro-add-form input::placeholder{color:#3a3010}
+.pro-add-submit{background:none;border:1px solid var(--border);border-radius:2px;padding:8px 14px;color:var(--cyan);font-family:'Share Tech Mono',monospace;font-size:11px;letter-spacing:1px;cursor:pointer;white-space:nowrap;transition:all .15s}
+.pro-add-submit:hover{border-color:var(--cyan);background:rgba(0,212,200,.06)}
+.pro-add-err{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--red);margin-top:6px;min-height:14px}
+@media(max-width:640px){
+  .pro-add-form{flex-wrap:wrap}
+  .pro-add-form input[type=text]{min-width:0}
+  .pro-add-form input[type=number]{width:70px}
+}
+
+/* ═══ CALC BTN ═══ */
+.calc-btn{width:100%;background:var(--accent);color:#000;border:none;border-radius:2px;padding:15px;font-family:'Oswald',sans-serif;font-size:17px;font-weight:700;cursor:pointer;transition:background .12s,transform .08s,box-shadow .12s;margin-bottom:26px;letter-spacing:4px;text-transform:uppercase;box-shadow:4px 4px 0 rgba(0,0,0,.5);position:relative;overflow:hidden}
+.calc-btn::before{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.14),transparent);transition:left .4s}
+.calc-btn:hover{background:#ffd020;box-shadow:4px 4px 0 rgba(0,0,0,.5),0 0 22px rgba(232,184,0,.35)}
+.calc-btn:hover::before{left:100%}
+.calc-btn:active{transform:translate(2px,2px);box-shadow:2px 2px 0 rgba(0,0,0,.5)}
+
+/* ═══ RESULTS ═══ */
+.result-table{background:var(--surface);border:1px solid var(--border);border-radius:3px;overflow:hidden;margin-bottom:18px}
+.result-table table{width:100%;border-collapse:collapse}
+.result-table th{background:#0d0b00;font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;color:var(--cyan);text-transform:uppercase;padding:11px 13px;text-align:right;font-weight:400;border-bottom:1px solid var(--border)}
+.result-table th:first-child{text-align:left}
+.result-table td{padding:12px 13px;font-family:'Share Tech Mono',monospace;font-size:13px;text-align:right;border-top:1px solid rgba(58,50,16,.45)}
+.result-table td:first-child{text-align:left;font-family:'Oswald',sans-serif;font-size:14px;font-weight:700;letter-spacing:1px}
+.badge{display:inline-block;padding:3px 9px;border-radius:2px;font-size:9px;font-family:'Share Tech Mono',monospace;letter-spacing:1px;text-transform:uppercase}
+.badge-ok{background:rgba(96,200,112,.1);color:var(--green);border:1px solid rgba(96,200,112,.28)}
+.badge-warn{background:rgba(232,184,0,.09);color:var(--yellow);border:1px solid rgba(232,184,0,.28)}
+.badge-danger{background:rgba(232,64,64,.09);color:var(--red);border:1px solid rgba(232,64,64,.28)}
+.val-pos{color:var(--green)}.val-neg{color:var(--red)}.val-zero{color:var(--muted)}.val-warn{color:var(--yellow)}
+
+.summary-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}
+.summary-card{background:var(--surface);border:1px solid var(--border);border-radius:3px;padding:14px;text-align:center;position:relative}
+.summary-card::before{content:'';position:absolute;top:0;left:15%;right:15%;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:.25}
+.summary-card .s-label{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);margin-bottom:7px;letter-spacing:1px;text-transform:uppercase}
+.summary-card .s-val{font-family:'Share Tech Mono',monospace;font-size:26px}
+
+.hidden{display:none}
+
+/* ═══ MOBILE ═══ */
+@media(max-width:640px){
+  header{padding:11px 13px;gap:10px}
+  header h1{font-size:15px}
+  .container{padding:13px 11px}
+  .formula-box{font-size:10px;line-height:1.8;padding:11px 12px;word-break:break-word}
+  .input-grid{grid-template-columns:1fr;gap:10px;margin-bottom:16px}
+  .beer-card{padding:13px}
+  .field-group input{padding:11px 11px;font-size:16px}
+  .pro-row input{font-size:14px;padding:8px 9px}
+  .calc-btn{padding:15px;font-size:16px;margin-bottom:18px}
+  .summary-cards{grid-template-columns:repeat(3,1fr);gap:7px}
+  .summary-card{padding:9px 5px}
+  .summary-card .s-label{font-size:8px;letter-spacing:0}
+  .summary-card .s-val{font-size:19px}
+  .result-table table,.result-table thead,.result-table tbody,
+  .result-table th,.result-table td,.result-table tr{display:block}
+  .result-table thead{display:none}
+  .result-table tr{border-top:1px solid var(--border);padding:12px 13px;display:grid;grid-template-columns:1fr 1fr;gap:5px 10px}
+  .result-table tr:first-child{border-top:none}
+  .result-table td{border-top:none;padding:0;font-size:12px;text-align:left}
+  .result-table td:first-child{grid-column:1/-1;font-size:13px;margin-bottom:3px}
+  .result-table td:not(:first-child)::before{display:block;font-size:8px;letter-spacing:1px;color:var(--muted);font-family:'Share Tech Mono',monospace;text-transform:uppercase;margin-bottom:2px}
+  .result-table td:nth-child(2)::before{content:'สต๊อกปกติ'}
+  .result-table td:nth-child(3)::before{content:'หักโปรรวม'}
+  .result-table td:nth-child(4)::before{content:'ควรเหลือ'}
+  .result-table td:nth-child(5)::before{content:'นับได้'}
+  .result-table td:nth-child(6)::before{content:'ขาด/เกิน'}
+  .result-table td:nth-child(7){grid-column:1/-1;margin-top:3px}
+  .result-table td:nth-child(7)::before{content:none}
+  .section-label{font-size:8px}
+  .vhs-stamp{font-size:10px;top:14px;right:12px}
+  .vhs-rec{font-size:10px;top:14px;left:12px}
+}
+</style>
+</head>
+<body>
+
+<!-- INTRO -->
+<div id="intro">
+  <div class="vhs-rec"><div class="rec-dot"></div>REC</div>
+  <div class="vhs-stamp" id="vhs-date"></div>
+  <div class="glitch-bar"></div>
+  <div class="glitch-bar"></div>
+  <div class="intro-content">
+    <div class="studio-box"><div class="studio-text">BP Snooker Club</div></div>
+    <div class="intro-title">BEER STOCK</div>
+    <div class="intro-subtitle">// INVENTORY SYSTEM v3.0 //</div>
+    <div class="vhs-progress"><div class="vhs-progress-fill" id="prog-fill"></div></div>
+    <div class="vhs-loading">LOADING<span>...</span></div>
+  </div>
+</div>
+
+<div id="fade-overlay"></div>
+
+<!-- APP -->
+<div id="app">
+<header>
+  <div class="logo-badge">BP</div>
+  <div>
+    <h1>ระบบตรวจสต๊อกเบียร์</h1>
+    <div class="header-sub">// คำนวณยอดจริงหลังหักโปร //</div>
+  </div>
+</header>
+
+<div class="container">
+
+  <div class="formula-box">
+    สูตร: <span>ควรเหลือ</span> = สต๊อกปกติ − รวม(จำนวนชุดโปร × ขวด/โปร)<br>
+    <em>ขาด/เกิน</em> = นับได้จริง − ควรเหลือ &nbsp;|&nbsp; บวก = <span style="color:var(--green)">เกิน</span> &nbsp;|&nbsp; ลบ = <span style="color:var(--red)">ขาด</span>
+  </div>
+
+  <p class="section-label">// จัดการประเภทโปร</p>
+  <div class="pro-manager">
+    <div class="pro-type-list" id="pro-tag-list"></div>
+    <div class="pro-add-form">
+      <input type="text" id="new-pro-name" placeholder="ชื่อโปร (ไม่บังคับ)" oninput="playTick()">
+      <input type="number" id="new-pro-size" placeholder="ขวด" min="1" oninput="playTick()" onkeydown="if(event.key==='Enter')addCustomProType()">
+      <button class="pro-add-submit" onclick="addCustomProType()">+ สร้างโปร</button>
+    </div>
+    <div class="pro-add-err" id="pro-add-err"></div>
+  </div>
+
+  <p class="section-label">// กรอกข้อมูลสต๊อก</p>
+  <div class="input-grid">
+
+    <!-- SINGHA -->
+    <div class="beer-card singha">
+      <span class="beer-icon">🔵</span>
+      <div class="beer-name">เบียร์สิงห์</div>
+      <div class="field-group">
+        <label>คงเหลือในระบบ (ขวด)</label>
+        <input type="number" id="s_stock" placeholder="0" oninput="playTick()">
+      </div>
+      <div class="field-group">
+        <label>นับได้จริง (ขวด)</label>
+        <input type="number" id="s_count" placeholder="0" oninput="playTick()">
+      </div>
+      <div class="pro-section">
+        <div class="pro-section-label">โปรที่ขาย (จำนวนชุด)</div>
+        <div class="pro-rows" id="s_pros"></div>
+        <button class="add-pro-btn" onclick="addProRow('s')">+ เพิ่มโปร</button>
+      </div>
+    </div>
+
+    <!-- LEO -->
+    <div class="beer-card leo">
+      <span class="beer-icon">🟡</span>
+      <div class="beer-name">เบียร์ลีโอ</div>
+      <div class="field-group">
+        <label>คงเหลือในระบบ (ขวด)</label>
+        <input type="number" id="l_stock" placeholder="0" oninput="playTick()">
+      </div>
+      <div class="field-group">
+        <label>นับได้จริง (ขวด)</label>
+        <input type="number" id="l_count" placeholder="0" oninput="playTick()">
+      </div>
+      <div class="pro-section">
+        <div class="pro-section-label">โปรที่ขาย (จำนวนชุด)</div>
+        <div class="pro-rows" id="l_pros"></div>
+        <button class="add-pro-btn" onclick="addProRow('l')">+ เพิ่มโปร</button>
+      </div>
+    </div>
+
+    <!-- CHANG -->
+    <div class="beer-card chang">
+      <span class="beer-icon">🟢</span>
+      <div class="beer-name">เบียร์ช้าง</div>
+      <div class="field-group">
+        <label>คงเหลือในระบบ (ขวด)</label>
+        <input type="number" id="c_stock" placeholder="0" oninput="playTick()">
+      </div>
+      <div class="field-group">
+        <label>นับได้จริง (ขวด)</label>
+        <input type="number" id="c_count" placeholder="0" oninput="playTick()">
+      </div>
+      <div class="pro-section">
+        <div class="pro-section-label">โปรที่ขาย (จำนวนชุด)</div>
+        <div class="pro-rows" id="c_pros"></div>
+        <button class="add-pro-btn" onclick="addProRow('c')">+ เพิ่มโปร</button>
+      </div>
+    </div>
+
+  </div>
+
+  <button class="calc-btn" onclick="handleCalc()">&#9654; คำนวณสต๊อก</button>
+
+  <div id="results" class="hidden">
+    <p class="section-label">// ภาพรวม</p>
+    <div class="summary-cards" id="summary-cards"></div>
+    <p class="section-label">// ตารางรายละเอียด</p>
+    <div class="result-table">
+      <table>
+        <thead>
+          <tr>
+            <th>เบียร์</th>
+            <th>สต๊อกปกติ</th>
+            <th>หักโปรรวม</th>
+            <th>ควรเหลือ</th>
+            <th>นับได้</th>
+            <th>ขาด/เกิน</th>
+            <th>สถานะ</th>
+          </tr>
+        </thead>
+        <tbody id="result-body"></tbody>
+      </table>
+    </div>
+    <div class="formula-box" id="interpret-box"></div>
+  </div>
+
+</div>
+</div>
+
+<script>
+/* ══════════════════════════════
+   AUDIO ENGINE
+══════════════════════════════ */
+let audioCtx = null;
+function getCtx(){
+  if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  return audioCtx;
+}
+function playTone(freq,type,dur,gain,fade){
+  try{
+    const ctx=getCtx(),osc=ctx.createOscillator(),g=ctx.createGain();
+    osc.connect(g);g.connect(ctx.destination);
+    osc.type=type;osc.frequency.setValueAtTime(freq,ctx.currentTime);
+    g.gain.setValueAtTime(gain,ctx.currentTime);
+    if(fade) g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+dur);
+    osc.start(ctx.currentTime);osc.stop(ctx.currentTime+dur);
+  }catch(e){}
+}
+function playNoise(dur,gain){
+  try{
+    const ctx=getCtx(),sz=ctx.sampleRate*dur,buf=ctx.createBuffer(1,sz,ctx.sampleRate),d=buf.getChannelData(0);
+    for(let i=0;i<sz;i++) d[i]=Math.random()*2-1;
+    const src=ctx.createBufferSource(),g=ctx.createGain(),f=ctx.createBiquadFilter();
+    f.type='highpass';f.frequency.value=2000;
+    src.buffer=buf;src.connect(f);f.connect(g);g.connect(ctx.destination);
+    g.gain.setValueAtTime(gain,ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+dur);
+    src.start(ctx.currentTime);src.stop(ctx.currentTime+dur);
+  }catch(e){}
+}
+function playTick(){ playTone(1200,'square',.04,.04,true); }
+function playAddPro(){ playTone(660,'sine',.08,.1,true); setTimeout(()=>playTone(880,'sine',.08,.08,true),80); }
+function playDelPro(){ playTone(300,'sawtooth',.08,.1,true); }
+function playIntroBeep(){
+  playTone(180,'sawtooth',.15,.28,false);
+  playTone(360,'sawtooth',.15,.14,true);
+  setTimeout(()=>playTone(540,'square',.2,.18,true),150);
+  setTimeout(()=>{playTone(1080,'sine',.3,.28,true);playNoise(.1,.14);},350);
+}
+function playTransitionSound(){
+  try{
+    const ctx=getCtx(),osc=ctx.createOscillator(),g=ctx.createGain();
+    osc.connect(g);g.connect(ctx.destination);osc.type='sawtooth';
+    osc.frequency.setValueAtTime(600,ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(80,ctx.currentTime+0.5);
+    g.gain.setValueAtTime(.2,ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+.5);
+    osc.start(ctx.currentTime);osc.stop(ctx.currentTime+.5);
+    playNoise(.3,.1);
+  }catch(e){}
+}
+function playCalcSound(){
+  [220,330,440,660,880].forEach((f,i)=>setTimeout(()=>playTone(f,'square',.12,.14,true),i*55));
+  setTimeout(()=>playNoise(.15,.08),330);
+}
+function playResultSound(hasBad){
+  if(hasBad){
+    playTone(80,'sawtooth',.3,.28,true);
+    setTimeout(()=>playTone(60,'sawtooth',.4,.22,true),200);
+  } else {
+    playTone(880,'sine',.15,.18,true);
+    setTimeout(()=>playTone(1108,'sine',.2,.14,true),100);
+    setTimeout(()=>playTone(1320,'sine',.25,.1,true),200);
+  }
+}
+
+/* ══════════════════════════════
+   INTRO SEQUENCE
+══════════════════════════════ */
+const now=new Date();
+document.getElementById('vhs-date').textContent=
+  String(now.getDate()).padStart(2,'0')+'/'+
+  String(now.getMonth()+1).padStart(2,'0')+'/'+
+  now.getFullYear()+'  '+
+  String(now.getHours()).padStart(2,'0')+':'+
+  String(now.getMinutes()).padStart(2,'0');
+
+window.addEventListener('load',()=>{
+  setTimeout(()=>{
+    playIntroBeep();
+    const fill=document.getElementById('prog-fill');
+    const start=performance.now(), total=2600;
+    function step(ts){
+      const p=Math.min(100,(ts-start)/total*100);
+      fill.style.width=p+'%';
+      if(p<100){ requestAnimationFrame(step); }
+      else { setTimeout(doFade,180); }
+    }
+    requestAnimationFrame(step);
+  },200);
+});
+
+function doFade(){
+  playTransitionSound();
+  const ov=document.getElementById('fade-overlay');
+  const intro=document.getElementById('intro');
+  const app=document.getElementById('app');
+  ov.classList.add('fading');
+  setTimeout(()=>{
+    intro.style.display='none';
+    app.classList.add('visible');
+    ov.style.transition='opacity .7s ease';
+    ov.style.opacity='0';
+  },600);
+}
+
+/* ══════════════════════════════
+   PRO TYPE MANAGER
+══════════════════════════════ */
+// builtin = cannot be deleted; custom = user-created
+const proTypes = [
+  { size:3, label:'โปร 3 ขวด', builtin:true },
+  { size:5, label:'โปร 5 ขวด', builtin:true },
+  { size:6, label:'โปร 6 ขวด', builtin:true },
+];
+
+function renderProTags(){
+  const list = document.getElementById('pro-tag-list');
+  list.innerHTML = proTypes.map((p,i) => `
+    <span class="pro-tag ${p.builtin?'builtin':''}">
+      ${p.label}
+      ${p.builtin ? '' : `<button class="tag-del" onclick="removeProType(${i})" title="ลบ">✕</button>`}
+    </span>
+  `).join('');
+}
+
+function removeProType(idx){
+  playTick();
+  proTypes.splice(idx,1);
+  renderProTags();
+  refreshAllSelects();
+}
+
+function addCustomProType(){
+  playTick();
+  const nameEl = document.getElementById('new-pro-name');
+  const sizeEl = document.getElementById('new-pro-size');
+  const errEl  = document.getElementById('pro-add-err');
+  const size   = parseInt(sizeEl.value);
+
+  if(!size || size < 1){
+    errEl.textContent = '⚠ กรุณาใส่จำนวนขวด (ต้องมากกว่า 0)';
+    sizeEl.focus();
+    return;
+  }
+  if(proTypes.find(p => p.size === size)){
+    errEl.textContent = `⚠ โปร ${size} ขวด มีอยู่แล้ว`;
+    return;
+  }
+
+  const label = nameEl.value.trim() || `โปร ${size} ขวด`;
+  proTypes.push({ size, label, builtin:false });
+  proTypes.sort((a,b) => a.size - b.size);
+
+  nameEl.value = '';
+  sizeEl.value = '';
+  errEl.textContent = '';
+
+  renderProTags();
+  refreshAllSelects();
+}
+
+function buildOpts(selectedSize){
+  return proTypes.map(p =>
+    `<option value="${p.size}" ${p.size===selectedSize?'selected':''}>${p.label}</option>`
+  ).join('');
+}
+
+function refreshAllSelects(){
+  document.querySelectorAll('.pro-row select').forEach(sel => {
+    const cur = parseInt(sel.value);
+    sel.innerHTML = buildOpts(cur);
+  });
+}
+
+function addProRow(prefix, selectedSize){
+  playTick();
+  const size = selectedSize || proTypes[0].size;
+  const container = document.getElementById(prefix+'_pros');
+  const row = document.createElement('div');
+  row.className = 'pro-row';
+  row.innerHTML = `
+    <select onchange="playTick()" title="ประเภทโปร">${buildOpts(size)}</select>
+    <input type="number" placeholder="0" min="0" oninput="playTick()" title="จำนวนชุดโปร (ใส่เป็นบวก)">
+    <button class="del-btn" onclick="delProRow(this)" title="ลบ">✕</button>
+  `;
+  container.appendChild(row);
+}
+
+function delProRow(btn){
+  playTick();
+  btn.closest('.pro-row').remove();
+}
+
+// Init
+renderProTags();
+['s','l','c'].forEach(p => addProRow(p));
+
+/* ══════════════════════════════
+   CALCULATE
+══════════════════════════════ */
+function handleCalc(){
+  playCalcSound();
+  setTimeout(calculate, 80);
+}
+
+function getProTotal(prefix){
+  // qty is entered as positive (e.g. 5 = 5 pro packs sold)
+  // returns negative total bottles deducted
+  const container = document.getElementById(prefix+'_pros');
+  const rows = container.querySelectorAll('.pro-row');
+  let total = 0;
+  rows.forEach(row => {
+    const size = parseInt(row.querySelector('select').value) || 3;
+    const qty  = Math.abs(parseFloat(row.querySelector('input').value) || 0);
+    total -= qty * size; // always deduct
+  });
+  return total; // negative = bottles deducted from stock
+}
+
+function getProDetail(prefix){
+  const container = document.getElementById(prefix+'_pros');
+  const rows = container.querySelectorAll('.pro-row');
+  const parts = [];
+  rows.forEach(row => {
+    const size = parseInt(row.querySelector('select').value) || 3;
+    const qty  = Math.abs(parseFloat(row.querySelector('input').value) || 0);
+    if(qty !== 0) parts.push(`${qty}ชุด × ${size}ขวด = −${qty*size}`);
+  });
+  return parts.length ? parts.join(' + ') : '—';
+}
+
+function calculate(){
+  const beers = [
+    { name:'เบียร์สิงห์', prefix:'s',
+      stock:+document.getElementById('s_stock').value,
+      count:+document.getElementById('s_count').value },
+    { name:'เบียร์ลีโอ',  prefix:'l',
+      stock:+document.getElementById('l_stock').value,
+      count:+document.getElementById('l_count').value },
+    { name:'เบียร์ช้าง', prefix:'c',
+      stock:+document.getElementById('c_stock').value,
+      count:+document.getElementById('c_count').value },
+  ];
+
+  const results = beers.map(b => {
+    const proTotal = getProTotal(b.prefix);   // negative
+    const proDetail = getProDetail(b.prefix);
+    const shouldHave = b.stock + proTotal;    // expected remaining
+    const diff = b.count - shouldHave;        // +excess / -missing
+    return { ...b, proTotal, proDetail, shouldHave, diff };
+  });
+
+  const totalDiff = results.reduce((a,r)=>a+r.diff, 0);
+  const missing   = results.filter(r=>r.diff<0).reduce((a,r)=>a+r.diff, 0);
+  const excess    = results.filter(r=>r.diff>0).reduce((a,r)=>a+r.diff, 0);
+
+  document.getElementById('summary-cards').innerHTML = `
+    <div class="summary-card">
+      <div class="s-label">ยอดสุทธิ ขาด/เกิน</div>
+      <div class="s-val ${totalDiff>=0?'val-pos':'val-neg'}">${totalDiff>=0?'+':''}${totalDiff}</div>
+    </div>
+    <div class="summary-card">
+      <div class="s-label">ขาดหาย (ขวด)</div>
+      <div class="s-val val-neg">${missing}</div>
+    </div>
+    <div class="summary-card">
+      <div class="s-label">เกินมา (ขวด)</div>
+      <div class="s-val val-pos">+${excess}</div>
+    </div>
+  `;
+
+  document.getElementById('result-body').innerHTML = results.map(r => {
+    const diffStr = r.diff>0 ? `<span class="val-pos">+${r.diff}</span>`
+                  : r.diff<0 ? `<span class="val-neg">${r.diff}</span>`
+                  : `<span class="val-zero">0</span>`;
+    const shouldClass = r.shouldHave<0?'val-neg':r.shouldHave<5?'val-warn':'';
+    let status,badge;
+    if(r.diff===0){status='ตรงกัน';badge='badge-ok';}
+    else if(r.diff>0){status='เกิน';badge='badge-warn';}
+    else if(r.diff>=-10){status='ขาดเล็กน้อย';badge='badge-warn';}
+    else{status='ขาดหนัก';badge='badge-danger';}
+    return `<tr>
+      <td>${r.name}</td>
+      <td>${r.stock}</td>
+      <td><span class="val-neg">${r.proTotal}</span></td>
+      <td class="${shouldClass}">${r.shouldHave}</td>
+      <td>${r.count}</td>
+      <td>${diffStr}</td>
+      <td><span class="badge ${badge}">${status}</span></td>
+    </tr>`;
+  }).join('');
+
+  const lines = results.map(r => {
+    const detail = r.proDetail !== '—' ? ` [${r.proDetail} = ${r.proTotal}ขวด]` : '';
+    if(r.diff>0) return `<span>${r.name}</span>${detail}: นับได้มากกว่าระบบ <em>+${r.diff} ขวด</em> → อาจบันทึกโปรเกินจริง หรือสต๊อกเข้ายังไม่บันทึก`;
+    if(r.diff<0) return `<span>${r.name}</span>${detail}: ขาดหาย <em>${r.diff} ขวด</em> → ตรวจสอบการขายที่ไม่บันทึก หรือของหาย`;
+    return `<span>${r.name}</span>${detail}: <em>ตรงกันพอดี ✓</em>`;
+  });
+  document.getElementById('interpret-box').innerHTML = lines.join('<br>');
+
+  const el = document.getElementById('results');
+  el.classList.remove('hidden');
+  el.scrollIntoView({behavior:'smooth',block:'start'});
+
+  setTimeout(()=>playResultSound(results.some(r=>r.diff<-10)), 380);
+}
+
+// ── PWA Service Worker registration ──
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
